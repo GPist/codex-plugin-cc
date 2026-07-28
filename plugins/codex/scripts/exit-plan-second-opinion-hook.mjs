@@ -5,7 +5,7 @@
 // plan to codex-advisor.mjs and return its opinion as additionalContext. Non-fatal
 // everywhere — a broken or slow codex must never block the plan flow (always exit 0).
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { homedir } from 'node:os';
@@ -14,6 +14,12 @@ import { fileURLToPath } from 'node:url';
 
 const ADVISOR = join(dirname(fileURLToPath(import.meta.url)), 'codex-advisor.mjs');
 const quit = () => process.exit(0);
+
+// Kill switch — either works, no restart needed:
+//   off: touch ~/.claude/cache/codex-advisor/plan-hook-off   (or CODEX_PLAN_OPINION_DISABLE=1)
+//   on:  rm    ~/.claude/cache/codex-advisor/plan-hook-off
+if (process.env.CODEX_PLAN_OPINION_DISABLE === '1') quit();
+if (existsSync(join(homedir(), '.claude', 'cache', 'codex-advisor', 'plan-hook-off'))) quit();
 
 let input;
 try { input = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { quit(); }
