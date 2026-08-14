@@ -9,9 +9,13 @@ import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
+import { runQueuedCodexExec } from "./lib/exec-launcher.mjs";
+
 const SCRIPT_PATH = fileURLToPath(import.meta.url);
 const PROTOCOL_TEMPLATE = path.join(path.dirname(SCRIPT_PATH), "..", "prompts", "collab-protocol.md");
 const COLLAB_DIR_NAME = ".codex-claude";
+const COLLAB_EXEC_TIMEOUT_MS = 1800000;
+const COLLAB_QUEUE_WAIT_MS = 3600000;
 const AGENTS = new Set(["codex", "claude"]);
 const MESSAGE_TYPES = new Set([
   "assign",
@@ -330,7 +334,7 @@ function cmdHandoff(mainRoot, flags) {
   }
 }
 
-function cmdRun(mainRoot, flags) {
+async function cmdRun(mainRoot, flags) {
   const paths = ensureInit(mainRoot);
   const assignments = readJson(paths.assignments, {});
   const assignment = requireIssue(assignments, flags.issue);
@@ -395,17 +399,29 @@ function cmdRun(mainRoot, flags) {
     args.push("-m", flags.model);
   }
   args.push(fullPrompt);
-  const logFd = fs.openSync(logFile, "w");
-  const result = spawnSync("codex", args, { stdio: ["ignore", logFd, logFd] });
-  fs.closeSync(logFd);
+  // One launcher for every plugin-owned `codex exec`: the run takes the global
+  // Codex slot, never inherits stdin, and is killed at its deadline.
+  const result = await runQueuedCodexExec({
+    args,
+    cwd: assignment.worktree,
+    logFile,
+    appendLog: false,
+    kind: "collab",
+    jobId: `collab-${assignment.issue}-${stamp}`,
+    timeoutMs: COLLAB_EXEC_TIMEOUT_MS,
+    queueWaitMs: COLLAB_QUEUE_WAIT_MS
+  });
+  if (result.timedOut) {
+    fail(`codex exec exceeded its ${COLLAB_EXEC_TIMEOUT_MS}ms deadline; see ${logFile}`);
+  }
   const log = fs.readFileSync(logFile, "utf8");
   const sessionMatch = log.match(/session id: ([0-9a-f-]+)/);
   if (sessionMatch && assignment.sessions[assignment.sessions.length - 1] !== sessionMatch[1]) {
     assignment.sessions.push(sessionMatch[1]);
     writeJson(paths.assignments, assignments);
   }
-  if (result.status !== 0) {
-    fail(`codex exec failed (exit ${result.status}); see ${logFile}`);
+  if (result.exitCode !== 0) {
+    fail(`codex exec failed (exit ${result.exitCode}); see ${logFile}`);
   }
   const finalMessage = fs.existsSync(finalFile) ? fs.readFileSync(finalFile, "utf8").trim() : "(no final message)";
   console.log(finalMessage);
@@ -476,7 +492,7 @@ function printUsage() {
   );
 }
 
-function main() {
+async function main() {
   const [command, ...rest] = process.argv.slice(2);
   const { flags } = parseFlags(rest);
   if (!command || command === "help" || flags.help === true) {
@@ -504,7 +520,7 @@ function main() {
       cmdConflicts(mainRoot);
       break;
     case "run":
-      cmdRun(mainRoot, flags);
+      await cmdRun(mainRoot, flags);
       break;
     case "handoff":
       cmdHandoff(mainRoot, flags);

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 
 import { getSessionRuntimeStatus } from "./codex.mjs";
+import { getQueuePosition, readSchedulerSnapshot } from "./scheduler.mjs";
 import { getConfig, listJobs, readJobFile, resolveJobFile } from "./state.mjs";
 import { SESSION_ID_ENV } from "./tracked-jobs.mjs";
 import { resolveWorkspaceRoot } from "./workspace.mjs";
@@ -169,13 +170,14 @@ export function enrichJob(job, options = {}) {
         : [],
     elapsed: formatElapsedDuration(job.startedAt ?? job.createdAt, job.completedAt ?? null),
     duration:
-      job.status === "completed" || job.status === "failed" || job.status === "cancelled"
+      job.status !== "queued" && job.status !== "running"
         ? formatElapsedDuration(job.startedAt ?? job.createdAt, job.completedAt ?? job.updatedAt)
         : null
   };
 
   return {
     ...enriched,
+    queuePosition: job.status === "queued" || job.status === "running" ? getQueuePosition(job.id) : null,
     phase: enriched.phase ?? inferLegacyJobPhase(enriched, enriched.progressPreview)
   };
 }
@@ -232,6 +234,7 @@ export function buildStatusSnapshot(cwd, options = {}) {
     workspaceRoot,
     config,
     sessionRuntime: getSessionRuntimeStatus(options.env, workspaceRoot),
+    scheduler: readSchedulerSnapshot({ env: options.env }),
     running,
     latestFinished,
     recent,
@@ -259,7 +262,8 @@ export function resolveResultJob(cwd, reference) {
   const selected = matchJobReference(
     jobs,
     reference,
-    (job) => job.status === "completed" || job.status === "failed" || job.status === "cancelled"
+    // A timed-out job is finished too: its partial result must stay reachable.
+    (job) => job.status !== "queued" && job.status !== "running"
   );
 
   if (selected) {

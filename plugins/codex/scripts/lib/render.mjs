@@ -121,6 +121,13 @@ function appendActiveJobsTable(lines, jobs) {
   }
 }
 
+function formatSeverityTally(tally) {
+  if (!tally || typeof tally !== "object") {
+    return null;
+  }
+  return `critical ${tally.critical ?? 0}, high ${tally.high ?? 0}, medium ${tally.medium ?? 0}, low ${tally.low ?? 0}`;
+}
+
 function pushJobDetails(lines, job, options = {}) {
   lines.push(`- ${formatJobLine(job)}`);
   if (job.summary) {
@@ -128,6 +135,19 @@ function pushJobDetails(lines, job, options = {}) {
   }
   if (job.phase) {
     lines.push(`  Phase: ${job.phase}`);
+  }
+  if (job.queuePosition) {
+    lines.push(`  Queue position: ${job.queuePosition}`);
+  }
+  if (job.verdict) {
+    lines.push(`  Verdict: ${job.verdict}`);
+  }
+  const tally = formatSeverityTally(job.severityTally);
+  if (tally) {
+    lines.push(`  Findings: ${tally}`);
+  }
+  if (job.finalOutputPath) {
+    lines.push(`  Result file: ${job.finalOutputPath}`);
   }
   if (options.showElapsed && job.elapsed) {
     lines.push(`  Elapsed: ${job.elapsed}`);
@@ -331,6 +351,15 @@ export function renderStatusReport(report) {
     ""
   ];
 
+  if (report.scheduler?.active || report.scheduler?.queue?.length) {
+    lines.push(
+      `Codex queue: ${report.scheduler.active ? `${report.scheduler.active.jobId} running` : "idle"}, ${
+        report.scheduler.queue.length
+      } waiting`,
+      ""
+    );
+  }
+
   if (report.running.length > 0) {
     appendActiveJobsTable(lines, report.running);
     lines.push("");
@@ -387,15 +416,40 @@ export function renderJobStatusReport(job) {
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
+/**
+ * A run that timed out, failed, or was cancelled must never read as a clean
+ * result, so its output is prefixed with what actually happened.
+ */
+function unfinishedRunBanner(job, storedJob) {
+  const status = job?.status ?? storedJob?.status ?? null;
+  if (!status || status === "completed") {
+    return "";
+  }
+
+  const exitCode = storedJob?.exitCode ?? null;
+  const lines = [`Status: ${status}${exitCode == null ? "" : ` (exit ${exitCode})`}`];
+  const errorMessage = job?.errorMessage ?? storedJob?.errorMessage ?? null;
+  if (errorMessage) {
+    lines.push(errorMessage);
+  }
+  const logFile = storedJob?.logFile ?? job?.logFile ?? null;
+  if (logFile) {
+    lines.push(`Log: ${logFile}`);
+  }
+  lines.push("Any output below is partial.", "");
+  return `${lines.join("\n")}\n`;
+}
+
 export function renderStoredJobResult(job, storedJob) {
   const threadId = storedJob?.threadId ?? job.threadId ?? null;
   const resumeCommand = threadId ? `codex resume ${threadId}` : null;
+  const banner = unfinishedRunBanner(job, storedJob);
   if (isStructuredReviewStoredResult(storedJob) && storedJob?.rendered) {
     const output = storedJob.rendered.endsWith("\n") ? storedJob.rendered : `${storedJob.rendered}\n`;
     if (!threadId) {
-      return output;
+      return `${banner}${output}`;
     }
-    return `${output}\nCodex session ID: ${threadId}\nResume in Codex: ${resumeCommand}\n`;
+    return `${banner}${output}\nCodex session ID: ${threadId}\nResume in Codex: ${resumeCommand}\n`;
   }
 
   const rawOutput =
@@ -405,17 +459,17 @@ export function renderStoredJobResult(job, storedJob) {
   if (rawOutput) {
     const output = rawOutput.endsWith("\n") ? rawOutput : `${rawOutput}\n`;
     if (!threadId) {
-      return output;
+      return `${banner}${output}`;
     }
-    return `${output}\nCodex session ID: ${threadId}\nResume in Codex: ${resumeCommand}\n`;
+    return `${banner}${output}\nCodex session ID: ${threadId}\nResume in Codex: ${resumeCommand}\n`;
   }
 
   if (storedJob?.rendered) {
     const output = storedJob.rendered.endsWith("\n") ? storedJob.rendered : `${storedJob.rendered}\n`;
     if (!threadId) {
-      return output;
+      return `${banner}${output}`;
     }
-    return `${output}\nCodex session ID: ${threadId}\nResume in Codex: ${resumeCommand}\n`;
+    return `${banner}${output}\nCodex session ID: ${threadId}\nResume in Codex: ${resumeCommand}\n`;
   }
 
   const lines = [

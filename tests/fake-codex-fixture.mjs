@@ -181,6 +181,28 @@ function emitTurnCompletedLater(threadId, turnId, item, delayMs) {
 }
 
 function nativeReviewText(target) {
+  if (BEHAVIOR === "structured-native-review") {
+    return JSON.stringify({
+      verdict: "needs-attention",
+      summary: "The built-in reviewer returned a structured result.",
+      findings: [
+        {
+          severity: "medium",
+          title: "Unchecked index access",
+          body: "The change indexes a collection that can be empty.",
+          file: "app.js",
+          line_start: 1,
+          line_end: 1,
+          confidence: 0.8,
+          recommendation: "Guard the empty case."
+        }
+      ],
+      next_steps: ["Add a regression test."]
+    });
+  }
+  if (BEHAVIOR === "huge-review") {
+    return "Reviewed uncommitted changes.\\n" + "detail line about the change under review. ".repeat(20000);
+  }
   if (target.type === "baseBranch") {
     return "Reviewed changes against " + target.branch + ".\\nNo material issues found.";
   }
@@ -249,6 +271,10 @@ function taskPayload(prompt, resume) {
 
 const args = process.argv.slice(2);
 if (args[0] === "--version") {
+  if (BEHAVIOR === "unavailable") {
+    console.error("codex: command failed");
+    process.exit(1);
+  }
   console.log("codex-cli test");
   process.exit(0);
 }
@@ -308,6 +334,10 @@ rl.on("line", (line) => {
       case "thread/start": {
         if (BEHAVIOR === "auth-run-fails") {
           throw new Error("authentication expired; run codex login");
+        }
+        if (BEHAVIOR === "hang-before-turn") {
+          // Never answers: the setup phase hangs while holding the global lease.
+          break;
         }
         if (requiresExperimental("persistExtendedHistory", message, state) || requiresExperimental("persistFullHistory", message, state)) {
           throw new Error("thread/start.persistFullHistory requires experimentalApi capability");
@@ -653,6 +683,9 @@ export function buildEnv(binDir) {
   const sep = process.platform === "win32" ? ";" : ":";
   return {
     ...process.env,
-    PATH: `${binDir}${sep}${process.env.PATH}`
+    PATH: `${binDir}${sep}${process.env.PATH}`,
+    // Keep the user-global Codex queue out of the developer's home directory:
+    // every fixture gets its own scheduler root, shared by the runs of one test.
+    CODEX_COMPANION_SCHEDULER_DIR: path.join(binDir, "scheduler")
   };
 }
