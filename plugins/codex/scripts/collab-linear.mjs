@@ -12,7 +12,7 @@
 //   node collab-linear.mjs remove <slug>                           abandon: remove worktree + delete branch
 //   node collab-linear.mjs list                                    show teamlet worktrees
 //
-// run opts: --model <m> (default gpt-5.6-sol), --effort <minimal|low|medium|high|xhigh>,
+// run opts: --model <m> (default gpt-6.1-sol), --effort <minimal|low|medium|high|xhigh>,
 //           --read-only (default sandbox is workspace-write scoped to the worktree + main .git)
 //
 // The merge gate lives in Linear and is enforced by the ORCHESTRATOR, not here: merge only
@@ -67,7 +67,7 @@ switch (cmd) {
     const task = argv[argv.length - 1];
     if (!task || task.startsWith('--') || task === slug || task === issue) die('last argument must be the task text');
     const wt = wtPath(slug);
-    const model = flagVal('--model') || 'gpt-5.6-sol';
+    const model = flagVal('--model') || 'gpt-6.1-sol';
     const effort = flagVal('--effort');
     const sandbox = flag('--read-only') ? 'read-only' : 'workspace-write';
 

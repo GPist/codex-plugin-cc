@@ -1,6 +1,6 @@
 # Codex Prompt Anti-Patterns
 
-Avoid these when prompting Codex or GPT-5.6.
+Avoid these when prompting Codex or GPT-6.
 
 ## Vague task framing
 
@@ -93,7 +93,7 @@ Bad:
 ```
 
 Better:
-- State the rule once, in the one block that owns it. GPT-5.6 tries to reconcile repeated or conflicting instructions and spends reasoning tokens doing it.
+- State the rule once, in the one block that owns it. GPT-6 is sensitive to its instructions, and a repeated or conflicting rule costs reasoning tokens.
 
 ## Blanket brevity orders
 
@@ -104,7 +104,7 @@ Be concise. Keep it short. No fluff.
 ```
 
 Better:
-- GPT-5.6 is more concise by default than earlier 5.x models; blanket brevity orders under-deliver detail. Specify the output shape you want, or leave length alone.
+- GPT-6 leans toward detailed, formatted output; blanket brevity orders under-deliver detail. Specify the output shape you want, or leave length alone.
 
 ## Unsupported certainty
 

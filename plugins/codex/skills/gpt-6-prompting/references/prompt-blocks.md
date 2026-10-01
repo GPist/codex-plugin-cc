@@ -1,8 +1,8 @@
 # Prompt Blocks
 
-Use these blocks selectively when composing Codex or GPT-5.6 prompts.
+Use these blocks selectively when composing Codex or GPT-6 prompts.
 Wrap each block in the XML tag shown in its heading.
-Pick at most one block per concern, and never restate a rule that already appears in another block — GPT-5.6 reconciles repeated or conflicting instructions at the cost of reasoning tokens.
+Pick at most one block per concern, and never restate a rule that already appears in another block — GPT-6 is sensitive to its instructions, so a repeated or conflicting rule costs reasoning tokens.
 
 ## Core Wrapper
 
@@ -32,7 +32,7 @@ Put the highest-value findings or decisions first.
 
 ### `compact_output_contract`
 
-Use only when a specific shape or brevity requirement exists. GPT-5.6 is concise by default — blanket brevity orders under-deliver detail.
+Use only when a specific shape or brevity requirement exists. GPT-6 leans toward detailed, formatted output — name the shape you want instead of issuing a blanket brevity order.
 
 ```xml
 <compact_output_contract>

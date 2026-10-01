@@ -6,7 +6,7 @@ user-invocable: false
 
 # Claude Fable 5 Prompting
 
-Use this when composing a prompt, review request, rebuttal, or protocol message whose reader is Claude Fable 5 — the counterpart to `gpt-5-6-prompting`. Based on Anthropic's official "Prompting Claude Fable 5" guidance.
+Use this when composing a prompt, review request, rebuttal, or protocol message whose reader is Claude Fable 5 — the counterpart to `gpt-6-prompting`. Based on Anthropic's official "Prompting Claude Fable 5" guidance.
 
 Core rules:
 
