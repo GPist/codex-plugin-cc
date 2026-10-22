@@ -26,8 +26,12 @@ if (existsSync(join(homedir(), '.claude', 'cache', 'codex-advisor', 'plan-hook-o
 
 let input;
 try { input = JSON.parse(readFileSync(0, 'utf8') || '{}'); } catch { quit('bad stdin json'); }
-const plan = input?.tool_input?.plan;
-if (!plan || typeof plan !== 'string' || !plan.trim()) quit('no tool_input.plan');
+// The approved plan arrives in tool_response.plan; tool_input.plan was empty in all 6 October runs.
+const plan = input?.tool_input?.plan ?? input?.tool_response?.plan;
+if (!plan || typeof plan !== 'string' || !plan.trim()) {
+  const keys = (o) => (o && typeof o === 'object' ? Object.keys(o).join(',') : typeof o) || '-';
+  quit(`no plan (tool_input keys: ${keys(input?.tool_input)}; tool_response keys: ${keys(input?.tool_response)})`);
+}
 // A rejected plan means Claude keeps planning — don't spend a codex run on it. Decide by the
 // response SHAPE: approval returns an object ({plan, filePath, …}); rejection returns the
 // "The user doesn't want to proceed…" string. Never regex the plan text itself — it is
