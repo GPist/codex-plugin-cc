@@ -7,7 +7,7 @@
 // repo root with instructions to verify claims against the actual code, and prints the
 // opinion to stdout. Non-fatal on any failure (exit 0).
 //
-// Env overrides: CODEX_ADVISOR_MODEL (default gpt-5.6-sol), CODEX_ADVISOR_EFFORT (default high).
+// Env overrides: CODEX_ADVISOR_MODEL (default gpt-6.1-sol), CODEX_ADVISOR_EFFORT (default high).
 // Arg overrides: --transcript <path> (specific session jsonl); --plan-file <path> (plan mode).
 
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync } from 'node:fs';
@@ -20,7 +20,7 @@ const HOME = homedir();
 const PROJECTS = join(HOME, '.claude', 'projects');
 // Live run logs — the canonical persistent location (one <runId> subdir per run). Never /tmp.
 const LOGS_ROOT = join(HOME, '.claude', 'logs', 'codex-advisor');
-const MODEL = process.env.CODEX_ADVISOR_MODEL || 'gpt-5.6-sol';
+const MODEL = process.env.CODEX_ADVISOR_MODEL || 'gpt-6.1-sol';
 const EFFORT = process.env.CODEX_ADVISOR_EFFORT || 'high';
 
 const argVal = (flag) => {

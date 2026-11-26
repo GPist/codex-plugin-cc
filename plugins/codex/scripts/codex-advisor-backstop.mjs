@@ -27,15 +27,18 @@ try { lines = readFileSync(tpath, 'utf8').split('\n').filter(Boolean); } catch {
 
 const parsed = lines.map((l) => { try { return JSON.parse(l); } catch { return null; } });
 
-// index of the most recent built-in advisor result
+// index of the most recent built-in advisor result WITH READABLE TEXT. Fable advisor results
+// arrive as {type:'advisor_redacted_result', encrypted_content} — codex-advisor cannot review
+// those, so forcing a run would only ever produce a skip. Ignore them here.
 let lastAdvisorIdx = -1;
 for (let i = 0; i < parsed.length; i++) {
   const c = parsed[i]?.message?.content;
-  if (parsed[i]?.type === 'assistant' && Array.isArray(c) && c.some((b) => b.type === 'advisor_tool_result')) {
+  if (parsed[i]?.type === 'assistant' && Array.isArray(c)
+      && c.some((b) => b.type === 'advisor_tool_result' && typeof b.content?.text === 'string' && b.content.text.trim())) {
     lastAdvisorIdx = i;
   }
 }
-if (lastAdvisorIdx === -1) allow(); // no advisor used this session
+if (lastAdvisorIdx === -1) allow(); // no reviewable advisor verdict this session
 
 // Did a codex-advisor run actually PRODUCE output after the latest advisor result?
 // Evidence = a tool_result carrying the second-opinion banner, or the "[codex-advisor]"

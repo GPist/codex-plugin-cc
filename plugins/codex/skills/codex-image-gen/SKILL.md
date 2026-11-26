@@ -5,20 +5,22 @@ description: Generate raster image assets (logo concepts, illustrations, icons, 
 
 # Image generation via Codex CLI
 
-Verified 2026-07-21 (codex-cli 0.144.1, model gpt-5.6-sol): the Codex model has a
-native image-generation tool, exposed headlessly through `codex exec`.
+Verified 2026-10-01 (codex-cli 0.159.2, model gpt-6-luna at high effort): the Codex
+model has a native image-generation tool, exposed headlessly through `codex exec`.
 
 ## Invocation contract
 
 ```
-cd <target-dir> && codex exec -m gpt-5.6-sol --sandbox workspace-write \
-  [--skip-git-repo-check] \
-  "<image brief>. Save as <name>.png in the current directory. Reply DONE when written."
+codex exec -m gpt-6-luna -c model_reasoning_effort=high -C <target-dir> \
+  --sandbox workspace-write [--skip-git-repo-check] \
+  "<image brief>. Save as <name>.png in the current directory. Reply DONE when written." \
+  < /dev/null
 ```
 
 - `--sandbox workspace-write` is REQUIRED. The default sandbox is read-only and
   cannot save into the workspace.
-- Run with cwd = the directory that should receive the files.
+- `-C <target-dir>` is the directory that receives the files.
+- `< /dev/null` closes stdin; a headless run with stdin left open can hang.
 - `--skip-git-repo-check` when the cwd is not a git repo (scratchpads, temp dirs).
 - Mechanics: images land first in `~/.codex/generated_images/<uuid>/*.png`; the
   model then copies them into the cwd — so ALWAYS specify exact output filenames.

@@ -16,23 +16,23 @@ Execution rules:
 - Prefer the helper over hand-rolled `git`, direct Codex CLI strings, or any other Bash activity.
 - Do not call `setup`, `review`, `adversarial-review`, `status`, `result`, or `cancel` from `codex:codex-rescue`.
 - Use `task` for every rescue request, including diagnosis, planning, research, and explicit fix requests.
-- You may use the `gpt-5-6-prompting` skill to rewrite the user's request into a tighter Codex prompt before the single `task` call.
+- You may use the `gpt-6-prompting` skill to rewrite the user's request into a tighter Codex prompt before the single `task` call.
 - That prompt drafting is the only Claude-side work allowed. Do not inspect the repo, solve the task yourself, or add independent analysis outside the forwarded prompt text.
 - Leave `--effort` unset unless the user explicitly requests a specific effort.
 - Leave model unset by default. Add `--model` only when the user explicitly asks for one.
-- Map `spark` to `--model gpt-5.6-luna` (fast tier). `gpt-5.3-codex-spark` is rejected on ChatGPT-account auth (verified 2026-07-22); note the substitution when you reply.
+- Map `spark` to `--model gpt-6-luna` (fast tier). `gpt-5.3-codex-spark` is rejected on ChatGPT-account auth (verified 2026-07-22); note the substitution when you reply.
 - Default to a write-capable Codex run by adding `--write` unless the user explicitly asks for read-only behavior or only wants review, diagnosis, or research without edits.
 
 Command selection:
 - Use exactly one `task` invocation per rescue handoff.
 - If the forwarded request includes `--background` or `--wait`, treat that as Claude-side execution control only. Strip it before calling `task`, and do not treat it as part of the natural-language task text.
-- If the forwarded request includes `--model`, normalize `spark` to `gpt-5.6-luna` and pass it through to `task`.
+- If the forwarded request includes `--model`, normalize `spark` to `gpt-6-luna` and pass it through to `task`.
 - If the forwarded request includes `--effort`, pass it through to `task`.
 - If the forwarded request includes `--resume`, strip that token from the task text and add `--resume-last`.
 - If the forwarded request includes `--fresh`, strip that token from the task text and do not add `--resume-last`.
 - `--resume`: always use `task --resume-last`, even if the request text is ambiguous.
 - `--fresh`: always use a fresh `task` run, even if the request sounds like a follow-up.
-- `--effort`: accepted values are `none`, `minimal`, `low`, `medium`, `high`, `xhigh`. (GPT-5.6's native scale is none/low/medium/high/xhigh/max; the companion caps at `xhigh` and still accepts legacy `minimal`. If the user asks for `max`, use `xhigh` and note the cap.)
+- `--effort`: accepted values are `none`, `minimal`, `low`, `medium`, `high`, `xhigh`. (GPT-6's native scale is low/medium/high/xhigh/max; `gpt-6.1-sol` and `gpt-6-astra` reject `none` and `minimal`, so do not pass those to them. The companion caps at `xhigh`. If the user asks for `max`, use `xhigh` and note the cap.)
 - `task --resume-last`: internal helper for "keep going", "resume", "apply the top fix", or "dig deeper" after a previous rescue run.
 
 Safety rules:
