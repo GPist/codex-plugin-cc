@@ -1,29 +1,36 @@
 ---
 name: gpt-6-prompting
-description: Internal guidance for composing Codex and GPT-6 prompts (Sol 6.1, Sol, Luna, Astra) for coding, review, diagnosis, and research tasks inside the Codex Claude Code plugin
+description: Internal guidance for composing Codex and GPT-6 prompts (Sol 6.2, Sol 6.1, Sol, Luna, Astra) for coding, review, diagnosis, and research tasks inside the Codex Claude Code plugin. Read before writing any Codex prompt.
 user-invocable: false
 ---
 
 # GPT-6 Prompting
 
-Use this skill when `codex:codex-rescue` needs to ask Codex or another GPT-6-based workflow for help.
+Use this skill before composing any prompt for Codex or another GPT-6 workflow: a rescue, a review, a diagnosis, a research run or a direct Codex CLI call.
 
-Model selection (GPT-6 family; `gpt-6.1-sol` requires codex-cli >= 0.159):
-- `gpt-6.1-sol` — current workhorse, near-Astra quality at lower cost. Default for delegated coding, review, diagnosis, and research tasks.
-- `gpt-6-sol` — previous-generation Sol. Use it where the caller's routing names it.
-- `gpt-6-luna` — fast tier. Focused, high-volume tasks where you know what a good result looks like: mechanical transforms, quick lookups, prescribed checks.
-- `gpt-6-astra` — frontier tier and the heaviest on the Codex allowance. Use it only when the user asks for Astra by name for that task.
-- Reasoning effort: the GPT-6 scale is `low`/`medium`/`high`/`xhigh`/`max`. Default `high` for Sol, always passed explicitly via `-c model_reasoning_effort="high"` — the CLI's own default for `gpt-6.1-sol` is `low`. `none` and `minimal` are rejected by `gpt-6.1-sol` and `gpt-6-astra`; do not pass them even though the companion's `--effort` flag still lists them. The companion caps at `xhigh`; `max` requires a direct `-c model_reasoning_effort` config.
-- `ultra` (Sol and Astra) adds automatic task delegation on top of maximum reasoning and multiplies usage. Never select it unless the user asks for it.
-- Prefer tightening the prompt contract before raising model tier or effort.
+Model and effort: the `codex-routing` skill holds the table (which model for which task, the client version each needs, the Astra and Terra rules). Read it first. What matters for the prompt itself:
+- Reasoning effort runs `low`/`medium`/`high`/`xhigh`/`max` and is always passed explicitly with `-c model_reasoning_effort="<level>"`: the CLI's own default for `gpt-6.1-sol` is `low`. Sol and Astra reject `none` and `minimal`, though the companion's `--effort` flag still lists them. The companion caps at `xhigh`; `max` needs the direct `-c` config.
+- `ultra` (Sol and Astra) lets Codex bring in sub-agents on its own and multiplies usage. Never select it unless the user asks for it.
+- Tighten the prompt contract before raising model tier or effort. Higher effort mainly buys persistence through the final checks of a long task.
 
 Prompt Codex like an operator, not a collaborator. Keep prompts lean: OpenAI measured ~10-15% better evals and 41-66% fewer tokens from leaner system prompts on GPT-5.6. State each instruction exactly once — OpenAI describes GPT-6 as more sensitive to its instructions than GPT-5.6, so a repeated or conflicting rule costs reasoning tokens and can change behaviour. Use XML-tagged blocks only where they add a real contract.
 
-GPT-6 behaviour to prompt around (from OpenAI's GPT-6 Astra guide; OpenAI publishes no separate prompting guidance for Sol or Luna):
-- It stops to ask more readily than GPT-5.6. For a run that should finish unattended, say which assumptions it may make on its own and tell it to complete the work already authorized before asking anything. `default_follow_through_policy` is the block for this.
+Behaviour to prompt around. OpenAI writes its guidance for Astra and states that the 6.2 guidance applies to Sol 6.2 too; it publishes none for Luna.
+
+GPT-6.2 (`gpt-6.2-sol`, `gpt-6.2-astra`), from OpenAI's "Prompting GPT-6.2 in Codex" and "Using GPT-6.2" (read 24 Nov 2026):
+- It is more concise and direct by default. Drop inherited "be concise" lines; ask for length or detail only where the output needs it.
+- When intent is unclear it may propose a next step and wait for confirmation. For a run that should finish unattended, say which assumptions it may make on its own and tell it to complete the work already authorized before asking anything. `default_follow_through_policy` is the block for this.
+- Say what the reviewer will look for when judging the result, what counts as finished, and where it should be exhaustive.
+- It can carry shorthand from its reasoning into the final answer. Where a person reads the output, ask for terms to be written out.
+- Describe the project's conventions. For interface work, name the imagery and typography wanted.
+- For a small change, name the checks that are required, and say to skip new tests unless the repo requires them or they catch a regression the existing tests miss.
+
+GPT-6 and 6.1 (`gpt-6-sol`, `gpt-6.1-sol`), from the GPT-6 Astra guide:
+- It stops to ask more readily than GPT-5.6; the same follow-through block applies.
 - It leans toward detailed, formatted answers: lists, tables, headers. Where the caller needs prose, ask for short paragraphs with lists only for parallel or sequential items.
-- It leans toward thorough testing. For a small change, name the checks that are required so it does not write tests that mirror the implementation.
-- Do not tell it to delegate to other agents unless the user wants that; delegation multiplies usage.
+- It leans toward thorough testing. Name the required checks so it does not write tests that mirror the implementation.
+
+Every model: do not tell it to use sub-agents. OpenAI's 6.2 guide suggests "use subagents as needed", but here the `codex-guard` hook caps every run at one thread, and delegation multiplies usage.
 
 
 Core rules:
